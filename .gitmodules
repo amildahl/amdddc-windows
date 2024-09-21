@@ -1,0 +1,3 @@
+[submodule "adl-sdk"]
+	path = adl-sdk
+	url = ./adl-sdk
