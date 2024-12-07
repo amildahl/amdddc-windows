@@ -1,7 +1,12 @@
-### AMD ONLY
-
 > [!IMPORTANT]
-> This utility will only work with an AMD GPU.  See [this project](https://github.com/kaleb422/NVapi-write-value-to-monitor) if you're using an nVidia GPU.  If you're using Intel, you could watch [this issue](https://github.com/rockowitz/ddcutil/issues/100) to see if someone writes a utility for you.
+> This utility will **_only_** work with an AMD GPU!
+> 
+> If you're using an Nvidia GPU, see [this project](https://github.com/kaleb422/NVapi-write-value-to-monitor) for using NVapi.
+> 
+> If you're using Intel, you could watch [this issue](https://github.com/rockowitz/ddcutil/issues/100) to see if someone writes a utility.
+
+> [!Warning]
+> This utility sends data over the i2c bus.  Use at your own risk.
 
 ### Description
 
@@ -62,6 +67,6 @@ The DDC spec listed [here](https://boichat.ch/nicolas/ddcci/specs.html) was help
 
 ### Reminders
 
-- This utility sends data over the i2c bus.  Use at your own risk.
+
 
 
