@@ -64,9 +64,3 @@ The ADL bits are based off the ADL sample [here](https://github.com/GPUOpen-Libr
 Commands, channel ids, etc were all helpfully sourced from the [ddcutil wiki](https://github.com/rockowitz/ddcutil/wiki/Switching-input-source-on-LG-monitors)
 
 The DDC spec listed [here](https://boichat.ch/nicolas/ddcci/specs.html) was helpful in determing the i2cset command to issue.
-
-### Reminders
-
-
-
-
