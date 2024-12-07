@@ -126,7 +126,6 @@ int main(int argc, const char* argv[])
     if (!InitADL())
         exit(1);
 
-    //vSetVcpCommand(0x50, 0xF4, 0xD1, 7, 0);
     Settings settings;
 
     try {
