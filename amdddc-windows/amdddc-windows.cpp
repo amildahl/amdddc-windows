@@ -71,21 +71,21 @@ void print_devices() {
     int iAdapterIndex = 0;
     int iNumberDisplays = 0;
 	int iDisplayIndex = 0;
-	int ADL_Err = ADL_ERR;
+    int ADL_Err = ADL_ERR;
 
-	adlprocs.ADL_Adapter_NumberOfAdapters_Get(&iNumberAdapters);
+    adlprocs.ADL_Adapter_NumberOfAdapters_Get(&iNumberAdapters);
 
-	if (iNumberAdapters <= 0)
-	{
-		cerr << "No AMD display devices found!" << endl;
-		return;
-	}
+    if (iNumberAdapters <= 0)
+    {
+        cerr << "No AMD display devices found!" << endl;
+        return;
+    }
 
     lpAdapterInfo = (LPAdapterInfo)malloc(sizeof(AdapterInfo) * iNumberAdapters);
-	memset(lpAdapterInfo, '\0', sizeof(AdapterInfo) * iNumberAdapters);
+    memset(lpAdapterInfo, '\0', sizeof(AdapterInfo) * iNumberAdapters);
 
     // Get the AdapterInfo structure for all adapters in the system
-	adlprocs.ADL_Adapter_AdapterInfo_Get(lpAdapterInfo, sizeof(AdapterInfo) * iNumberAdapters);
+    adlprocs.ADL_Adapter_AdapterInfo_Get(lpAdapterInfo, sizeof(AdapterInfo) * iNumberAdapters);
 
     // Repeat for all available adapters in the system
     for (int i = 0; i < iNumberAdapters; i++) {
@@ -94,7 +94,7 @@ void print_devices() {
 
         ADL_Err = adlprocs.ADL_Display_DisplayInfo_Get(lpAdapterInfo[i].iAdapterIndex, &iNumberDisplays, &lpAdlDisplayInfo, 0);
 
-		cout << "Adapter Index: " << iAdapterIndex << " Adapter Name: " << lpAdapterInfo[i].strAdapterName << endl;
+        cout << "Adapter Index: " << iAdapterIndex << " Adapter Name: " << lpAdapterInfo[i].strAdapterName << endl;
 
         for (int j = 0; j < iNumberDisplays; j++)
         {
@@ -125,24 +125,24 @@ int main(int argc, const char* argv[])
 
     try {
         settings = parse_settings(argc, argv);
-	}
-	catch (const runtime_error& e) {
+    }
+    catch (const runtime_error& e) {
         cerr << "Error: " << e.what() << endl << endl;
         print_help();
-		return 1;
-	}
+        return 1;
+    }
 
-	if (settings.help) {
-		print_help();
-		return 0;
-	}
+    if (settings.help) {
+        print_help();
+        return 0;
+    }
 
     switch (settings.command) {
     case detect:
-		print_devices();
-		break;
-	case setvcp:
-		vSetVcpCommand(settings.i2c_subaddress, VCP_CODE_SWITCH_INPUT, settings.input, settings.monitor, settings.display);
+        print_devices();
+        break;
+    case setvcp:
+        vSetVcpCommand(settings.i2c_subaddress, VCP_CODE_SWITCH_INPUT, settings.input, settings.monitor, settings.display);
         break;
     default:
         print_help();
