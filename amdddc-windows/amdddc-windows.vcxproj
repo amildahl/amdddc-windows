@@ -129,10 +129,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="adl.cpp" />
     <ClCompile Include="amdddc-windows.cpp" />
+    <ClCompile Include="settings.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="adl.h" />
+    <ClInclude Include="settings.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
