@@ -23,11 +23,6 @@ int vWriteI2c(char* lpucSendMsgBuf, int iSendMsgLen, int iAdapterIndex, int iDis
 
 void vSetVcpCommand(unsigned int subaddress, unsigned char ucVcp, unsigned int ulVal, int iAdapterIndex, int iDisplayIndex)
 {
-    // i2c sub address
-    // side channel code
-	// display code - 0xD0 for DP1, 0xD1 for USB-C, 0x90 for HDMI, 0x91 for HDMI2
-    // adapter index
-	// display index
     unsigned int i;
     unsigned char chk = 0;
     int ADL_Err = ADL_ERR;
