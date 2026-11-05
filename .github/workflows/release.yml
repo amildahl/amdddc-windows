@@ -1,0 +1,158 @@
+name: Build and release
+
+on:
+  push:
+    branches: [master]
+    # Only inputs to the binary; README edits should not cut a release.
+    paths:
+      - 'amdddc-windows/**'
+      - 'amdddc-windows.sln'
+      - 'adl-sdk'
+      - '.gitmodules'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialise runs so two quick pushes cannot race on creating releases. Never cancel
+# the running one mid-publish. A pending run is still replaced when a newer push
+# arrives; the newer commit's release contains its changes.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build (Release x64)
+    # The project pins PlatformToolset v143, which is native to VS 2022. windows-latest
+    # has moved to VS 2026, where v143 is only an add-on component.
+    runs-on: windows-2022
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+          persist-credentials: false
+
+      - name: Locate MSBuild
+        id: msbuild
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $msbuild = & $vswhere -latest -products * `
+            -requires Microsoft.Component.MSBuild Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
+          if (-not $msbuild) { throw 'MSBuild with the MSVC x64 toolset was not found' }
+          "path=$msbuild" >> $env:GITHUB_OUTPUT
+
+      - name: Build
+        shell: pwsh
+        env:
+          MSBUILD: ${{ steps.msbuild.outputs.path }}
+        run: |
+          & $env:MSBUILD amdddc-windows.sln /m /nologo /p:Configuration=Release /p:Platform=x64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          # Runners have no AMD driver, so ADL init fails and the tool exits 1 by design.
+          # This proves the exe loads and runs here; a crash surfaces as an NTSTATUS exit
+          # code. It cannot catch a missing VC++ runtime: the runner has it installed.
+          & .\x64\Release\amdddc-windows.exe --help
+          if ($LASTEXITCODE -notin 0, 1) { throw "unexpected exit code $LASTEXITCODE" }
+          exit 0
+
+      - name: Compute release tag
+        id: version
+        shell: bash
+        run: |
+          # Derived from the commit, not the run, so re-running a build targets the same release.
+          date="$(TZ=UTC git log -1 --format=%cd --date=format-local:%Y.%m.%d)"
+          echo "tag=v${date}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build output
+        uses: actions/upload-artifact@v7
+        with:
+          name: amdddc-windows-x64
+          path: x64/Release/amdddc-windows.exe
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    # Write access is scoped to this job, which runs no project code.
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.build.outputs.tag }}
+    steps:
+      - name: Download build output
+        uses: actions/download-artifact@v8
+        with:
+          name: amdddc-windows-x64
+          path: dist
+
+      - name: Write checksums
+        working-directory: dist
+        run: sha256sum amdddc-windows.exe > SHA256SUMS.txt
+
+      # GITHUB_TOKEN cannot create a release on a commit whose .github/workflows differs
+      # from master's. If this workflow is edited twice in quick succession, the older
+      # run fails here with a misleading "workflow scope" 404; the newer run releases.
+      - name: Publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          notes="Windows x64 build. Works only with AMD GPUs, and sends DDC/CI commands to the monitor over the I2C bus. Use at your own risk.
+
+          Requires the latest [Microsoft Visual C++ Redistributable (x64)](https://aka.ms/vc14/vc_redist.x64.exe)."
+
+          # gh omits make_latest and the API then defaults to true, so publishing an older
+          # commit (e.g. re-running a superseded run) would move "Latest" backwards.
+          latest=true
+          if prev="$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name 2>/dev/null)" &&
+             [ "$(gh api "repos/$GH_REPO/compare/$GITHUB_SHA...$prev" --jq .status)" = ahead ]; then
+            latest=false
+          fi
+
+          if draft="$(gh release view "$TAG" --json isDraft --jq .isDraft 2>"$RUNNER_TEMP/view.err")"; then
+            :
+          elif grep -q 'release not found' "$RUNNER_TEMP/view.err"; then
+            draft=missing
+          else
+            cat "$RUNNER_TEMP/view.err" >&2
+            exit 1
+          fi
+
+          case "$draft" in
+            false)
+              # Never swap assets on a published release: MSVC output is not bit-identical
+              # across builds, so a rebuild would silently change the published checksum.
+              echo "::notice::$TAG is already published; leaving it unchanged."
+              ;;
+            true)
+              # A run cancelled partway through "gh release create" leaves a draft behind.
+              gh release upload "$TAG" dist/amdddc-windows.exe dist/SHA256SUMS.txt --clobber
+              gh release edit "$TAG" --draft=false --latest="$latest"
+              ;;
+            missing)
+              gh release create "$TAG" dist/amdddc-windows.exe dist/SHA256SUMS.txt \
+                --target "$GITHUB_SHA" \
+                --title "amdddc-windows $TAG" \
+                --notes "$notes" \
+                --generate-notes \
+                --latest="$latest"
+              ;;
+            *)
+              echo "unexpected release state: $draft" >&2
+              exit 1
+              ;;
+          esac
