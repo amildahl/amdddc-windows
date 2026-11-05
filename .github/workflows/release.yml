@@ -60,8 +60,7 @@ jobs:
         shell: pwsh
         run: |
           # Runners have no AMD driver, so ADL init fails and the tool exits 1 by design.
-          # This proves the exe loads and runs here; a crash surfaces as an NTSTATUS exit
-          # code. It cannot catch a missing VC++ runtime: the runner has it installed.
+          # This proves the exe loads and runs; a crash surfaces as an NTSTATUS exit code.
           & .\x64\Release\amdddc-windows.exe --help
           if ($LASTEXITCODE -notin 0, 1) { throw "unexpected exit code $LASTEXITCODE" }
           exit 0
@@ -111,9 +110,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          notes="Windows x64 build. Works only with AMD GPUs, and sends DDC/CI commands to the monitor over the I2C bus. Use at your own risk.
-
-          Requires the latest [Microsoft Visual C++ Redistributable (x64)](https://aka.ms/vc14/vc_redist.x64.exe)."
+          notes="Windows x64 build. Works only with AMD GPUs, and sends DDC/CI commands to the monitor over the I2C bus. Use at your own risk."
 
           # gh omits make_latest and the API then defaults to true, so publishing an older
           # commit (e.g. re-running a superseded run) would move "Latest" backwards.
